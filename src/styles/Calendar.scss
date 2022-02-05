@@ -2,12 +2,24 @@
     header {
         width: 100%;
         background-color: red;
-        padding: 10px 0px;
-        p {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1vh;
+        box-sizing: border-box;
+        div {
+            p {
+                margin: 0;
+            }
             color: white;
-            margin: 0;
-            font-size: 30px;
             font-weight: 600;
+            .year {
+                font-size: 0.8em;
+            }
+            .month {
+                font-size: 1.5em;
+            }
         }
     }
 
