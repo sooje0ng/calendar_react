@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "../styles/Calendar.scss";
 import { AiFillCaretLeft, AiFillCaretRight } from "react-icons/ai";
-import API from "../config/apiSettings.json";
+import axios from "axios";
+import API_KEYS from "../config/apikeys.json";
 
 function Calendar() {
     const d = new Date();
@@ -18,8 +19,7 @@ function Calendar() {
     useEffect(() => {
         makeCal(selected);
         getMonthlySchedules();
-        getDailySchedules();
-    }, []);
+    }, [selected.month]);
 
     const makeCal = (data) => {
         const firstDay = new Date(`${data.year}-${data.month}-01`).getDay();
@@ -41,20 +41,6 @@ function Calendar() {
         };
 
         setSelected(newMonth);
-        makeCal(newMonth);
-    };
-
-    const getMonthlySchedules = async () => {
-        const result = await (
-            await fetch(API.url + "/calendar?year=2022&month=2")
-        ).json();
-        console.log(result);
-    };
-    const getDailySchedules = async () => {
-        const result = await (
-            await fetch(API.url + "/calendar?year=2022&month=2&date=5")
-        ).json();
-        console.log(result);
     };
 
     const nextMonth = () => {
@@ -65,7 +51,88 @@ function Calendar() {
         };
 
         setSelected(newMonth);
-        makeCal(newMonth);
+    };
+
+    const getMonthlySchedules = async () => {
+        axios({
+            method: "GET",
+            url: "/calendar",
+            params: {
+                apikey: API_KEYS.calendar,
+                year: selected.year,
+                month: selected.month,
+                userkey: 3,
+            },
+        }).then((res) => {
+            console.log(res.data);
+        });
+    };
+
+    const getDailySchedules = async () => {
+        axios({
+            method: "GET",
+            url: "/calendar",
+            params: {
+                apikey: API_KEYS.calendar,
+                year: selected.year,
+                month: selected.month,
+                date: selected.date,
+                userkey: 3,
+            },
+        }).then((res) => {
+            console.log(res.data);
+        });
+    };
+
+    const addSchedule = async () => {
+        axios({
+            method: "POST",
+            url: "/calendar",
+            data: {
+                apikey: API_KEYS.calendar,
+                StartDateTime: "2022-02-10T21:00",
+                EndDateTime: "2022-02-10T23:00",
+                UserKey: 3,
+                Title: "스터디하는 날 ㅎㅎ",
+                Memo: "중요!",
+                AllDay: false,
+            },
+        }).then((res) => {
+            console.log(res.data);
+        });
+    };
+
+    const editSchedule = async () => {
+        axios({
+            method: "PUT",
+            url: "/calendar",
+            data: {
+                apikey: API_KEYS.calendar,
+                id: "61fe81e6328a63873c1e0bb4",
+                UserKey: 3,
+                StartDateTime: "2022-02-10T21:30",
+                EndDateTime: "2022-02-10T23:30",
+                Title: "스터디하는 날 ㅎㅎ",
+                Memo: "미뤄짐 ㅠ",
+                AllDay: false,
+            },
+        }).then((res) => {
+            console.log(res.data);
+        });
+    };
+
+    const removeSchedule = async () => {
+        axios({
+            method: "DELETE",
+            url: "/calendar",
+            data: {
+                apikey: API_KEYS.calendar,
+                id: "6202702bb7f1163179d98c60",
+                UserKey: 3,
+            },
+        }).then((res) => {
+            console.log(res.data);
+        });
     };
 
     return (
