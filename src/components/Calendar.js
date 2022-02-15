@@ -18,47 +18,23 @@ function Calendar(props) {
         month: d.getMonth() + 1,
         date: d.getDate(),
     });
-    const [viewAdd, setViewAdd] = useState(false);
+    const [viewAdd, setViewAdd] = useState(null);
+    const [arSchedule, setArSchedule] = useState([]);
 
     useEffect(() => {
         makeCal(selected);
         getMonthlySchedules();
     }, [selected.month]);
 
-    useEffect(() => {
-        setSelect();
-    }, []);
-
-    const setSelect = () => {
-        const year = document.getElementById("year");
-        const month = document.getElementById("month");
-        const date = document.getElementById("date");
-
-        for (let i = 0; i < 10; i++) {
-            year.innerHTML +=
-                "<option value='>" +
-                (i + d.getFullYear()) +
-                "'>" +
-                (i + d.getFullYear()) +
-                "</option>";
-        }
-        for (let i = d.getMonth() + 1; i <= 12; i++) {
-            month.innerHTML += "<option value='>" + i + "'>" + i + "</option>";
-        }
-
-        for (let i = d.getDate(); i <= arLastDate[d.getMonth()]; i++) {
-            date.innerHTML += "<option value='>" + i + "'>" + i + "</option>";
-        }
+    const select = (date) => {
+        const newSelected = {
+            year: selected.year,
+            month: selected.month,
+            date: date,
+        };
+        setSelected(newSelected);
     };
 
-    const setSelectDate = () => {
-        let month = document.getElementById("month").value;
-        const date = document.getElementById("date");
-
-        for (let i = 1; i <= arLastDate[month - 1]; i++) {
-            date.innerHTML += "<option value='>" + i + "'>" + i + "</option>";
-        }
-    };
     const makeCal = (data) => {
         const firstDay = new Date(`${data.year}-${data.month}-01`).getDay();
         const newArDate = [];
@@ -75,7 +51,7 @@ function Calendar(props) {
         const newMonth = {
             year: selected.month === 1 ? selected.year - 1 : selected.year,
             month: selected.month === 1 ? 12 : selected.month - 1,
-            date: -1,
+            date: 1,
         };
 
         setSelected(newMonth);
@@ -85,7 +61,7 @@ function Calendar(props) {
         const newMonth = {
             year: selected.month === 12 ? selected.year + 1 : selected.year,
             month: selected.month === 12 ? 1 : selected.month + 1,
-            date: -1,
+            date: 1,
         };
 
         setSelected(newMonth);
@@ -103,6 +79,7 @@ function Calendar(props) {
             },
         }).then((res) => {
             console.log(res.data);
+            setArSchedule(res.data.result);
         });
     };
 
@@ -123,20 +100,51 @@ function Calendar(props) {
     };
 
     const addSchedule = async () => {
+        let date =
+            selected.year +
+            "-" +
+            String(selected.month).padStart(2, "0") +
+            "-" +
+            String(selected.date).padStart(2, "0");
+
+        let startTime = document.getElementById("startTime");
+        let endTime = document.getElementById("endTime");
+        let title = document.getElementById("title");
+        let memo = document.getElementById("memo");
+        let allday = document.getElementById("allday");
+
+        if (!startTime.value) {
+            alert("시작 시간을 입력해주세요.");
+            return;
+        } else if (!endTime.value) {
+            alert("종료 시간을 입력해주세요.");
+            return;
+        } else if (!title.value) {
+            alert("일정 제목을 입력해주세요.");
+            return;
+        }
         axios({
             method: "POST",
             url: "/calendar",
             data: {
-                apikey: API_KEYS.calendar,
-                StartDateTime: "2022-02-10T21:00",
-                EndDateTime: "2022-02-10T23:00",
-                UserKey: 3,
-                Title: "스터디하는 날 ㅎㅎ",
-                Memo: "중요!",
-                AllDay: false,
+                apikey: API_KEYS.calendar, //mandatory
+                StartDateTime: date + "T" + startTime.value, //mandatory
+                EndDateTime: date + "T" + endTime.value, //mandatory
+                UserKey: props.user.UserKey, //mandatory
+                Title: title.value, //mandatory
+                Memo: memo.value, //optional
+                AllDay: allday.checked, //optional
             },
         }).then((res) => {
-            console.log(res.data);
+            getMonthlySchedules();
+            setViewAdd(null);
+            startTime.value = "";
+            endTime.value = "";
+            startTime.readOnly = false;
+            endTime.readOnly = false;
+            title.value = "";
+            memo.value = "";
+            allday.checked = "";
         });
     };
 
@@ -184,6 +192,19 @@ function Calendar(props) {
         window.sessionStorage.removeItem("name");
     };
 
+    const allDay = (e) => {
+        const startTime = document.getElementById("startTime");
+        const endTime = document.getElementById("endTime");
+        if (e.target.checked) {
+            startTime.value = "00:00";
+            endTime.value = "23:59";
+            startTime.readOnly = true;
+            endTime.readOnly = true;
+        } else {
+            startTime.readOnly = false;
+            endTime.readOnly = false;
+        }
+    };
     return (
         <div className="Calendar">
             <header>
@@ -196,7 +217,7 @@ function Calendar(props) {
                     <AiOutlinePlus
                         size={30}
                         color="white"
-                        onClick={() => setViewAdd(true)}
+                        onClick={() => setViewAdd("Add")}
                     />
                     <IoLogOut size={30} color="white" onClick={logout} />
                     <AiFillCaretRight
@@ -215,15 +236,31 @@ function Calendar(props) {
                     ))}
                 </ul>
                 <ul className="arDate">
-                    {arDate.map((value, index) => (
-                        <li key={index} className="date">
+                    {arDate.map((date, index) => (
+                        <li
+                            key={index}
+                            className="date"
+                            onClick={() => select(date)}
+                        >
                             <span
-                                className={
-                                    value == selected.date ? "today" : ""
-                                }
+                                className={date == selected.date ? "today" : ""}
                             >
-                                {value}
+                                {date}
                             </span>
+                            <ul className="schedules">
+                                {arSchedule.map((schedule, scheIndex) =>
+                                    parseInt(
+                                        schedule.StartDateTime.substr(8, 2)
+                                    ) == date ? (
+                                        <li
+                                            key={scheIndex}
+                                            onClick={() => setViewAdd("Detail")}
+                                        >
+                                            {schedule.Title}
+                                        </li>
+                                    ) : null
+                                )}
+                            </ul>
                         </li>
                     ))}
                 </ul>
@@ -236,24 +273,46 @@ function Calendar(props) {
                     <AiOutlineClose
                         className="btn-close"
                         size={20}
-                        onClick={() => setViewAdd(false)}
+                        onClick={() => setViewAdd(null)}
                     />
-                    <h2>일정 추가</h2>
-                    <select id="year" className="select"></select>
-                    <select id="month" className="select"></select>
-                    <select id="date" className="select"></select>
-                    <div>
-                        <input id="startH" />:<input id="startM" />
-                    </div>
-                    <div>
-                        <input id="endH" />:<input id="endM" />
-                    </div>
-                    <label>
-                        <input type="checkbox" />
-                        하루종일
-                    </label>
-                    <input id="title" type="text" placeholder="일정 제목" />
-                    <input id="memo" type="text" placeholder="일정 내용" />
+                    <h2>
+                        일정{" "}
+                        {viewAdd === "Add"
+                            ? "추가"
+                            : viewAdd === "Edit"
+                            ? "수정"
+                            : ""}
+                    </h2>
+                    {viewAdd === "Add" ? (
+                        <div>
+                            <p>
+                                {selected.year}년 {selected.month}월{" "}
+                                {selected.date}일{" "}
+                            </p>
+                            <input type="time" id="startTime" />
+                            <input type="time" id="endTime" />
+
+                            <label>
+                                <input
+                                    id="allday"
+                                    type="checkbox"
+                                    onChange={allDay}
+                                />
+                                하루종일
+                            </label>
+                            <input
+                                id="title"
+                                type="text"
+                                placeholder="일정 제목"
+                            />
+                            <input
+                                id="memo"
+                                type="text"
+                                placeholder="일정 내용"
+                            />
+                            <button onClick={addSchedule}>일정 추가</button>
+                        </div>
+                    ) : null}
                 </div>
             </div>
         </div>
